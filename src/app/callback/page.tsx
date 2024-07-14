@@ -1,9 +1,9 @@
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { redirect } from 'next/navigation';
-import { getUserbyID, getUserWithNoConnections } from './neo4j.action';
-import HomeComponent from './components/Home';
+import { createUser, getUserbyID } from '../neo4j.action';
 
-export default async function Home() {
+
+export default async function Callback() {
   const { isAuthenticated, getUser } = getKindeServerSession();
 
   if (!await isAuthenticated()) {
@@ -20,14 +20,12 @@ export default async function Home() {
     )
   };
 
-  const getUserswithNoConnections = await getUserWithNoConnections(user.id);
-  const getCurrentUser = await getUserbyID(user.id);
+  const dbUser = await getUserbyID(user.id);
 
-  return (
-    <main>
-      {getCurrentUser &&
-        <HomeComponent users={getUserswithNoConnections} currentUser={getCurrentUser} />
-      }
-    </main>
-  );
+  if (!dbUser) {
+    //create user in Neo4j
+    await createUser({ id: user.id, firstName: user.given_name!, lastName: user.family_name ?? undefined, email: user.email! });
+  }
+
+  return redirect('/');
 }
